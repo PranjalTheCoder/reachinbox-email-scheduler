@@ -260,6 +260,13 @@ When 1000+ emails are scheduled simultaneously:
 1. Open http://localhost:3000 → login with Google
 2. Click "Compose Email" → fill subject/body
 3. Upload a CSV (one email per line)
+
+## Assumptions & Trade-offs
+
+- **Ethereal Email for Testing:** For demonstration purposes, the system defaults to generating test accounts via Ethereal Email if real SMTP credentials are not provided. This avoids spamming real addresses during the evaluation.
+- **In-Memory Rate Limit Fallback:** Rate limiting is primarily handled by Redis via atomic Lua scripts to support horizontal scaling. However, if Redis were to fail completely, the system assumes a hard stop rather than falling back to in-memory limits, prioritizing strict SMTP compliance over availability.
+- **WebSocket Scaling:** The current WebSocket implementation broadcasts live queue statistics directly from the Express server. In a multi-node production cluster, a Redis Pub/Sub adapter would be necessary to synchronize WebSocket events across all backend instances.
+- **OAuth Scope:** Google OAuth requests only basic profile information for authentication. It does not request Gmail send permissions, as sending is decoupled to standard SMTP to fulfill the assignment's agnostic email provider requirements.
 4. Set start time ~1 minute in the future
 5. Click "Schedule"
 6. Watch the **Scheduled** tab populate
