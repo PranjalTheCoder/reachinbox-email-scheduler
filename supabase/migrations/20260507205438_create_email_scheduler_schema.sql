@@ -1,4 +1,7 @@
-/*
+# Add Docker compose and Supabase/Prisma schemas
+git add docker-compose.yml supabase/
+git add apps/backend/Dockerfile apps/backend/prisma/
+git commit -m "setup: add docker infrastructure and database schemas"/*
   # Email Scheduler Schema
 
   1. New Tables
