@@ -1,4 +1,4 @@
-{
+git add apps/backend/src/server.ts apps/backend/src/types/ apps/backend/src/config/ apps/backend/src/constants/ apps/backend/src/lib/ apps/backend/src/utils/{
   "name": "@reachinbox/backend",
   "version": "1.0.0",
   "private": true,
