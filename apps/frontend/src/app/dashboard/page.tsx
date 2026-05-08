@@ -17,24 +17,25 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, isLoading, isAuthenticated } = useAuth();
 
-  useWebSocket();
+  useWebSocket(isAuthenticated);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) router.push("/login");
+    if (!isLoading && !isAuthenticated) router.replace("/login");
   }, [isLoading, isAuthenticated, router]);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="h-16 border-b" />
-        <div className="p-6 space-y-6">
+      <DashboardShell>
+        <div className="space-y-6">
           <Skeleton className="h-8 w-48" />
           <div className="grid grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-24 rounded-2xl" />
+            ))}
           </div>
           <Skeleton className="h-96 rounded-2xl" />
         </div>
-      </div>
+      </DashboardShell>
     );
   }
 

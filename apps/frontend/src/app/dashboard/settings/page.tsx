@@ -18,7 +18,7 @@ export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) router.push("/login");
+    if (!isLoading && !isAuthenticated) router.replace("/login");
   }, [isLoading, isAuthenticated, router]);
 
   if (isLoading) {
@@ -28,6 +28,8 @@ export default function SettingsPage() {
       </div>
     );
   }
+
+  if (!isAuthenticated) return null;
 
   return (
     <DashboardShell>

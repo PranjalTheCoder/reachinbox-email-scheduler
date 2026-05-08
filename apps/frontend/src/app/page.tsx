@@ -1,5 +1,8 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 export default function Home() {
-  redirect("/login");
+  const hasAuthToken = Boolean(cookies().get("token")?.value);
+
+  redirect(hasAuthToken ? "/dashboard" : "/login");
 }

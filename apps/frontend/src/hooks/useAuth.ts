@@ -18,7 +18,7 @@ export function useAuth() {
     mutationFn: authApi.logout,
     onSuccess: () => {
       qc.clear();
-      router.push("/login");
+      router.replace("/login");
     },
   });
 

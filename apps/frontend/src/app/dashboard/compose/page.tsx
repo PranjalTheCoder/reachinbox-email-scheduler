@@ -12,12 +12,18 @@ export default function ComposePage() {
   const { isLoading, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) router.push("/login");
+    if (!isLoading && !isAuthenticated) router.replace("/login");
   }, [isLoading, isAuthenticated, router]);
 
   if (isLoading) {
-    return <div className="min-h-screen bg-background p-6"><Skeleton className="h-96 rounded-2xl" /></div>;
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <Skeleton className="h-96 rounded-2xl" />
+      </div>
+    );
   }
+
+  if (!isAuthenticated) return null;
 
   return (
     <DashboardShell>
