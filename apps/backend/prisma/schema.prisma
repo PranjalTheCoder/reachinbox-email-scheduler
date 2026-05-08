@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum EmailStatus {
+  scheduled
+  queued
+  processing
+  sent
+  failed
+  retrying
+  cancelled
+}
+
+enum CampaignStatus {
+  draft
+  scheduled
+  running
+  paused
+  completed
+  failed
+}
+
+enum EmailEventType {
+  scheduled
+  queued
+  processing
+  sent
+  failed
+  retrying
+  cancelled
+  rate_limited
+}
+
+// ─── Models ──────────────────────────────────────────────────────────────────
+
+model User {
+  id        String          @id @default(uuid())
+  googleId  String          @unique @map("google_id")
+  email     String          @unique
+  name      String          @default("")
+  avatar    String          @default("")
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+  emailJobs EmailJob[]
+  campaigns EmailCampaign[]
+  senders   EmailSender[]
+
+  @@map("users")
+}
+
+model EmailSender {
+  id                  String   @id @default(uuid())
+  userId              String   @map("user_id")
+  senderName          String   @default("") @map("sender_name")
+  senderEmail         String   @map("sender_email")
+  smtpHost            String   @default("smtp.ethereal.email") @map("smtp_host")
+  smtpPort            Int      @default(587) @map("smtp_port")
+  smtpUser            String   @default("") @map("smtp_user")
+  smtpPasswordEncrypted String @default("") @map("smtp_password_encrypted")
+  isActive            Boolean  @default(true) @map("is_active")
+  dailyLimit          Int      @default(500) @map("daily_limit")
+  hourlyLimit         Int      @default(100) @map("hourly_limit")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailJobs EmailJob[]
+
+  @@unique([userId, senderEmail])
+  @@index([userId])
+  @@index([userId, isActive])
+  @@map("email_senders")
+}
+
+model EmailCampaign {
+  id          String          @id @default(uuid())
+  userId      String          @map("user_id")
+  name        String
+  description String          @default("")
+  status      CampaignStatus  @default(draft)
+  totalEmails Int             @default(0) @map("total_emails")
+  sentEmails  Int             @default(0) @map("sent_emails")
+  failedEmails Int            @default(0) @map("failed_emails")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailJobs EmailJob[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("email_campaigns")
+}
+
+model EmailJob {
+  id                String       @id @default(uuid())
+  recipientEmail    String       @map("recipient_email")
+  recipientName     String       @default("") @map("recipient_name")
+  subject           String
+  body              String
+  htmlBody          String?      @map("html_body")
+  scheduledTime     DateTime     @map("scheduled_time")
+  sentTime          DateTime?    @map("sent_time")
+  status            EmailStatus  @default(scheduled)
+  senderId          String       @map("sender_id")
+  senderEmail       String       @default("") @map("sender_email")
+  senderIdFk        String?      @map("sender_id_fk")
+  campaignId        String?      @map("campaign_id")
+  retryCount        Int          @default(0) @map("retry_count")
+  maxRetries        Int          @default(5) @map("max_retries")
+  bullJobId         String?      @map("bull_job_id")
+  queueName         String       @default("email-scheduler") @map("queue_name")
+  providerMessageId String?      @map("provider_message_id")
+  previewUrl        String?      @map("preview_url")
+  errorMessage      String?      @map("error_message")
+  priority          Int          @default(0)
+  idempotencyKey    String?      @unique @map("idempotency_key")
+  lastAttemptAt     DateTime?    @map("last_attempt_at")
+  nextRetryAt       DateTime?    @map("next_retry_at")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+
+  sender   User           @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  senderFk EmailSender?   @relation(fields: [senderIdFk], references: [id], onDelete: SetNull)
+  campaign EmailCampaign?  @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  events   EmailEvent[]
+
+  @@index([senderId])
+  @@index([status])
+  @@index([scheduledTime])
+  @@index([campaignId])
+  @@index([idempotencyKey])
+  @@index([priority])
+  @@index([status, scheduledTime])
+  @@index([senderId, status])
+  @@map("email_jobs")
+}
+
+model EmailEvent {
+  id          String          @id @default(uuid())
+  emailJobId  String          @map("email_job_id")
+  eventType   EmailEventType  @map("event_type")
+  metadata    Json            @default("{}")
+  createdAt   DateTime        @default(now()) @map("created_at")
+
+  emailJob EmailJob @relation(fields: [emailJobId], references: [id], onDelete: Cascade)
+
+  @@index([emailJobId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("email_events")
+}
+
+model RateLimitWindow {
+  id         String   @id @default(uuid())
+  senderId   String   @map("sender_id")
+  hourWindow String   @map("hour_window")
+  sentCount  Int      @default(0) @map("sent_count")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([senderId, hourWindow])
+  @@index([senderId, hourWindow])
+  @@map("rate_limit_windows")
+}
+
+model WorkerLock {
+  id        String   @id @default(uuid())
+  lockKey   String   @unique @map("lock_key")
+  workerId  String   @map("worker_id")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([lockKey])
+  @@index([expiresAt])
+  @@map("worker_locks")
+}
